@@ -1,0 +1,3 @@
+C:/Users/Nhago/CLionProjects/TrabalhoFinalED/cmake-build-debug/CMakeFiles/TrabalhoFinalED.dir
+C:/Users/Nhago/CLionProjects/TrabalhoFinalED/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/Nhago/CLionProjects/TrabalhoFinalED/cmake-build-debug/CMakeFiles/rebuild_cache.dir
