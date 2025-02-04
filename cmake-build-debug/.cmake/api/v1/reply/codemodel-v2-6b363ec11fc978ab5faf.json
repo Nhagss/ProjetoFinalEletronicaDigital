@@ -6,7 +6,7 @@
 			[
 				{
 					"build" : ".",
-					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.26"
@@ -39,7 +39,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "TrabalhoFinalED::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-TrabalhoFinalED-Debug-0206ac6815a25a71b266.json",
+					"jsonFile" : "target-TrabalhoFinalED-Debug-c0b47d8fcbdb46bb8728.json",
 					"name" : "TrabalhoFinalED",
 					"projectIndex" : 0
 				}
@@ -49,12 +49,12 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/Users/Nhago/CLionProjects/TrabalhoFinalED/cmake-build-debug",
-		"source" : "C:/Users/Nhago/CLionProjects/TrabalhoFinalED"
+		"build" : "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug",
+		"source" : "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados"
 	},
 	"version" : 
 	{
 		"major" : 2,
-		"minor" : 5
+		"minor" : 7
 	}
 }
