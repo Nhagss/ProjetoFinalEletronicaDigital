@@ -215,6 +215,7 @@ PetType *update_pt(PetTypeList *list, int code, int new_code, char *name) {
     strcpy(target->name, name);
     return target;
 }
+
 // SUPPLEMENTARY FUNCTIONS
 // prints the entire list, its head, tail and count
 void print_list_pt(PetTypeList list) {
@@ -241,22 +242,109 @@ void print_list_pt(PetTypeList list) {
     printf("\n<FINISHED PRINTING PET TYPE LIST/>\n\n");
 }
 
+// Free all nodes in the list
+void free_list_pt(PetTypeList *list) {
+    PetType *current = list->head;
+    while (current) {
+        PetType *next = current->next;
+        free(current);
+        current = next;
+    }
+    list->head = list->tail = NULL;
+    list->count = 0;
+}
+
+//Using binary tree to order pet type by name
+// PERGUNTAR AO AJALMAR SE PODE HAVER USUARIOS COM NOME IGUAL
+
+typedef struct PTNode {
+    PetType *pet;
+    struct PTNode *left;
+    struct PTNode *right;
+} PTNode;
+
+PTNode *create_node_pt(PetType *pet) {
+    PTNode* new_pt_node = (PTNode*)malloc(sizeof(PTNode));
+    new_pt_node->pet = pet;
+    new_pt_node->left = new_pt_node->right = NULL;
+    return new_pt_node;
+}
+
+PTNode *insert(PTNode *root, PetType *pet) {
+    if (!root) {
+        return create_node_pt(pet);
+    }
+
+    if (strcmp(pet->name, root->pet->name) < 0) {
+        root->left = insert(root->left, pet);
+    } else if (strcmp(pet->name, root->pet->name) > 0) {
+        root->right = insert(root->right, pet);
+    }
+    return root;
+}
+
+void inorderTraversal(PTNode *root) {
+    if (!root) return;
+    inorderTraversal(root->left);
+    printf("%s ", root->pet->name);
+    inorderTraversal(root->right);
+}
+
+void freeTree(PTNode *root) {
+    if (!root) return;
+    freeTree(root->left);
+    freeTree(root->right);
+    free(root);
+}
+
+void print_pt_order_by_name(PetTypeList *list) {
+    PTNode *root = NULL;
+    PetType *current = list->head;
+    while (current) {
+        root = insert(root, current);
+        current = current->next;
+    }
+
+    printf("In-order traversal: ");
+    inorderTraversal(root);
+    printf("\n");
+    freeTree(root);
+}
+
+
 int main() {
     PetTypeList petTypeList;
     initialize_list_pt(&petTypeList);
     load_list_pt(&petTypeList, "petTypes.dat");
-    /*
-    insert_top_pt(&petTypeList, 11, "Rodolf2");
-    insert_top_pt(&petTypeList, 10, "Rodolfo1");
-    insert_bottom_pt(&petTypeList, 12, "Rodolf3");
-    insert_bottom_pt(&petTypeList, 13, "Rodolf4");
-    insert_top_pt(&petTypeList, 11, "rofoldo");
-    */
-    update_pt(&petTypeList, 11, 14, "Rodolfake");
+
+    insert_top_pt(&petTypeList, 1, "g");
+    insert_top_pt(&petTypeList, 2, "h");
+    insert_top_pt(&petTypeList, 3, "c");
+    insert_top_pt(&petTypeList, 4, "v");
+    insert_top_pt(&petTypeList, 5, "b");
+    insert_top_pt(&petTypeList, 6, "n");
+    insert_top_pt(&petTypeList, 7, "m");
+    print_list_pt(petTypeList);
+    print_pt_order_by_name(&petTypeList);
+/*
+    PetType *teste = petTypeList.head;
+    PTNode *root = NULL;
+    while (teste) {
+        insert(root, *teste);
+    }
+
+    printf("In order:");
+    inorderTraversal(root);
+    printf("\n");
+    freeTree(root);
+*/
+    //update_pt(&petTypeList, 11, 14, "Rodolfake");
     //remove_pt(&petTypeList, 11);
 
 
-    print_list_pt(petTypeList);
+    //print_list_pt(petTypeList);
     save_list_pt(&petTypeList, "petTypes.dat");
+
+    free_list_pt(&petTypeList);
     return 0;
 }
