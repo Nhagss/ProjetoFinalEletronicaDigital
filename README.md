@@ -81,9 +81,11 @@ delete from pet where codigo = 1;
 - **Manipulação de Arquivos**
 
 ## ✨ Autores
-**Yago Souza**
-**João Roberto**
 
+Desenvolvido como parte de um trabalho acadêmico para a disciplina de **Estrutura de Dados**.
+
+- [Nhagss](https://github.com/Nhagss)
+- [João Roberto](https://github.com/joaorbrto)
 
 Desenvolvido como parte de um trabalho acadêmico para a disciplina de **Estrutura de Dados**.
 
