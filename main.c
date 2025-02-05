@@ -3,7 +3,7 @@
 #include <string.h>
 
 
-// Estrutura para Tipo de Pet
+// Pet Type structur
 typedef struct PetType {
     int code;
     char name[50];
@@ -17,9 +17,89 @@ typedef struct {
 } PetTypeList;
 
 // Initializes an empty list
-void inicializarTiposPet(PetTypeList *list) { list->head = NULL; list->tail = NULL; list->count = 0; }
+void initialize_list_pt(PetTypeList *list) { list->head = NULL; list->tail = NULL; list->count = 0; }
 
-// Insert Functions
+//FILE FUNCTIONS
+//Save pet list to file
+void save_list_pt(PetTypeList *list, const char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        perror("Error opening file for writing\n");
+        return;
+    }
+
+    fwrite(&list->count, sizeof(int), 1, file);
+
+    PetType *current = list->head;
+    while (current) {
+        fwrite(current, sizeof(PetType) - sizeof(PetType*), 1, file); // Save without pointers
+        current = current->next;
+    }
+
+    fclose(file);
+}
+
+//Read file for pet list
+void load_list_pt(PetTypeList *list, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        printf("File does not exist. Starting with an empty list.\n");
+
+        return;
+    }
+
+    fread(&list->count, sizeof(int), 1, file);
+    list->head = list->tail = NULL;
+
+    for (int i = 0; i < list->count; i++) {
+        PetType *newNode = (PetType *)malloc(sizeof(PetType));
+        fread(newNode, sizeof(PetType) - sizeof(PetType*), 1, file);
+        newNode->prev = newNode->next = NULL;
+
+        if (!list->head) {
+            list->head = list->tail = newNode;
+        } else {
+            newNode->prev = list->tail;
+            list->tail->next = newNode;
+            list->tail = newNode;
+        }
+    }
+
+    fclose(file);
+}
+
+
+// CRUD FUNCTIONS
+// Searches for a pet and returns it
+PetType *search_pt(PetTypeList *list, int code) {
+    if(!list) {
+        printf("WARN: List is empty \n");
+        return NULL;
+    }
+
+    PetType *cursor = list->head;
+    while(cursor->code != code && cursor->next) {
+        cursor = cursor->next;
+    }
+    if(cursor->code != code) {
+        printf("WARN: Type of pet not found\n");
+        return NULL;
+    }
+    printf("INFO: Found pet type with code %d\n", code);
+    return cursor;
+}
+
+//Checks if code already exists on a list
+int check_code_pt(PetTypeList list, int code) {
+    PetType *arrow = list.head;
+    if(search_pt(&list, code)) {
+        return 0;
+    }
+    return 1;
+}
+
+// INSERT FUNCTIONS
+// Inserts on top (returns new pet type in case it is needed)
 PetType *insert_top_pt(PetTypeList *list, int code, char *name) {
     PetType *new = malloc(sizeof(PetType));
     if(!new) {
@@ -37,6 +117,10 @@ PetType *insert_top_pt(PetTypeList *list, int code, char *name) {
         list->tail->next = NULL;
         printf("CREATION: Created new pet type list!\n");
     } else {
+        if(!check_code_pt(*list, code)) {
+            printf("WARN: A pet type with this code already exists!\n");
+            return NULL;
+        }
         new->prev = NULL;
         new->next = list->head;
         list->head->prev = new;
@@ -47,6 +131,7 @@ PetType *insert_top_pt(PetTypeList *list, int code, char *name) {
     return new;
 }
 
+// Inserts on bottom (returns new pet type in case it is needed)
 PetType *insert_bottom_pt(PetTypeList *list, int code, char *name) {
     PetType *new = malloc(sizeof(PetType));
     if(!new) {
@@ -64,6 +149,10 @@ PetType *insert_bottom_pt(PetTypeList *list, int code, char *name) {
         list->tail->next = NULL;
         printf("CREATION: Created new pet type list!\n");
     } else {
+        if(!check_code_pt(*list, code)) {
+            printf("WARN: A pet type with this code already exists!\n");
+            return NULL;
+        }
         new->next = NULL;
         new->prev = list->tail;
         list->tail->next = new;
@@ -74,28 +163,8 @@ PetType *insert_bottom_pt(PetTypeList *list, int code, char *name) {
     return new;
 }
 
-// Search Function
-PetType *search_pt(PetTypeList *list, int code) {
-    if(!list) {
-        printf("WARN: List is empty \n");
-        return NULL;
-    }
-
-    PetType *cursor = list->head;
-    while(cursor->code != code && cursor->next) {
-        cursor = cursor->next;
-    }
-    if(cursor->code != code) {
-        printf("WARN: Type of pet not found\n");
-        return NULL;
-    }
-    printf("INFO: Found pet type with code %d", code);
-    return cursor;
-
-
-}
-// Delete Function
-int removePetList(PetTypeList *list, int code) {
+// Delete Function (returns 0 if it fails and 1 if it succesess)
+int remove_pt(PetTypeList *list, int code) {
     if (!list) {
         printf("WARN: Empty list\n");
         return 0;
@@ -131,8 +200,24 @@ int removePetList(PetTypeList *list, int code) {
     return 1;
 }
 
-// Outras funções CRUD para TipoPet e Pet seguem o mesmo padrão...
-void checkPetList(PetTypeList list) {
+PetType *update_pt(PetTypeList *list, int code, int new_code, char *name) {
+    PetType *target = search_pt(list, code);
+    if(!target) {
+        printf("WARN: Pet Type not found\n");
+        return NULL;
+    }
+
+    if(!check_code_pt(*list, new_code)) {
+        printf("WARN: Code already exists\n");
+        return NULL;
+    }
+    target->code = new_code;
+    strcpy(target->name, name);
+    return target;
+}
+// SUPPLEMENTARY FUNCTIONS
+// prints the entire list, its head, tail and count
+void print_list_pt(PetTypeList list) {
     printf("<PRINTING PET TYPE LIST [%d]> \n\n", list.count);
     if(!list.head) {
         printf("Lista Vazia\n");
@@ -158,12 +243,20 @@ void checkPetList(PetTypeList list) {
 
 int main() {
     PetTypeList petTypeList;
-    inicializarTiposPet(&petTypeList);
+    initialize_list_pt(&petTypeList);
+    load_list_pt(&petTypeList, "petTypes.dat");
+    /*
     insert_top_pt(&petTypeList, 11, "Rodolf2");
     insert_top_pt(&petTypeList, 10, "Rodolfo1");
     insert_bottom_pt(&petTypeList, 12, "Rodolf3");
     insert_bottom_pt(&petTypeList, 13, "Rodolf4");
-    removePetList(&petTypeList, 13);
-    checkPetList(petTypeList);
+    insert_top_pt(&petTypeList, 11, "rofoldo");
+    */
+    update_pt(&petTypeList, 11, 14, "Rodolfake");
+    //remove_pt(&petTypeList, 11);
+
+
+    print_list_pt(petTypeList);
+    save_list_pt(&petTypeList, "petTypes.dat");
     return 0;
 }
