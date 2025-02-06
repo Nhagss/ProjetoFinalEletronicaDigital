@@ -57,10 +57,10 @@ RM = /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados"
+CMAKE_SOURCE_DIR = /Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug"
+CMAKE_BINARY_DIR = /Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug/CMakeFiles" "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug//CMakeFiles/progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug/CMakeFiles /Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -129,6 +129,30 @@ TrabalhoFinalED/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/TrabalhoFinalED.dir/build.make CMakeFiles/TrabalhoFinalED.dir/build
 .PHONY : TrabalhoFinalED/fast
 
+filaDeComandos.o: filaDeComandos.c.o
+.PHONY : filaDeComandos.o
+
+# target to build an object file
+filaDeComandos.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TrabalhoFinalED.dir/build.make CMakeFiles/TrabalhoFinalED.dir/filaDeComandos.c.o
+.PHONY : filaDeComandos.c.o
+
+filaDeComandos.i: filaDeComandos.c.i
+.PHONY : filaDeComandos.i
+
+# target to preprocess a source file
+filaDeComandos.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TrabalhoFinalED.dir/build.make CMakeFiles/TrabalhoFinalED.dir/filaDeComandos.c.i
+.PHONY : filaDeComandos.c.i
+
+filaDeComandos.s: filaDeComandos.c.s
+.PHONY : filaDeComandos.s
+
+# target to generate assembly for a file
+filaDeComandos.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TrabalhoFinalED.dir/build.make CMakeFiles/TrabalhoFinalED.dir/filaDeComandos.c.s
+.PHONY : filaDeComandos.c.s
+
 main.o: main.c.o
 .PHONY : main.o
 
@@ -162,6 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... TrabalhoFinalED"
+	@echo "... filaDeComandos.o"
+	@echo "... filaDeComandos.i"
+	@echo "... filaDeComandos.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

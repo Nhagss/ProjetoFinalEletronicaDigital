@@ -1,3 +1,3 @@
-/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug/CMakeFiles/TrabalhoFinalED.dir
-/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/yagosouza/Developer/Faculdade/estrutura de dados/projetoFinal/ProjetoFinalEstruturaDeDados/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug/CMakeFiles/TrabalhoFinalED.dir
+/Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/joaoroberto/CLionProjects/ProjetoFinalEletronicaDigital/cmake-build-debug/CMakeFiles/rebuild_cache.dir

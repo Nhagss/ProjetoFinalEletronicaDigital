@@ -3,4 +3,6 @@ project(TrabalhoFinalED C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(TrabalhoFinalED main.c)
+add_executable(TrabalhoFinalED main.c
+        filaDeComandos.c
+)

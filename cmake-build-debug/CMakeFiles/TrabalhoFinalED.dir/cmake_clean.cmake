@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/TrabalhoFinalED.dir/filaDeComandos.c.o"
+  "CMakeFiles/TrabalhoFinalED.dir/filaDeComandos.c.o.d"
   "CMakeFiles/TrabalhoFinalED.dir/main.c.o"
   "CMakeFiles/TrabalhoFinalED.dir/main.c.o.d"
   "TrabalhoFinalED"
