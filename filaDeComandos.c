@@ -147,26 +147,3 @@ void imprimir_comando(const Command *cmd) {
     }
 }
 
-// Função principal para testar
-int main() {
-    Command cmd;
-    char *testes[] = {
-        "insert into tipo_pet(codigo, descricao) values (10, 'cachorro');",
-        "update pessoa set nome = 'joao', fone = '859995566' where codigo = 1;",
-        "delete from pet where codigo = 3;",
-        "select * from pet order by nome;",
-        "invalid command example;",
-    };
-
-    int n = sizeof(testes) / sizeof(testes[0]);
-    for (int i = 0; i < n; i++) {
-        printf("\nComando: %s\n", testes[i]);
-        if (analisar_comando(testes[i], &cmd)) {
-            imprimir_comando(&cmd);
-        } else {
-            printf("Comando inválido!\n");
-        }
-    }
-
-    return 0;
-}
