@@ -1,5 +1,6 @@
 #include "person.h"
-
+#include "petType.h"
+#include "pet.h"
 // Initializes an empty list
 void initialize_list_person(PersonList *list) {
     list->head = NULL;
@@ -9,6 +10,7 @@ void initialize_list_person(PersonList *list) {
 
 // Save person list to file
 void save_list_person(PersonList *list, const char *filename) {
+    printf("saving");
     FILE *file = fopen(filename, "wb");
     if (!file) {
         perror("Error opening file for writing\n");
@@ -151,8 +153,43 @@ Person *insert_bottom_person(PersonList *list, int code, char *name, char *phone
     return new;
 }
 
+Pet *search_pet_by_person(PetList *list, int person_code) {
+    if (!list || !list->head) {
+        printf("WARN: Pet list is empty\n");
+        return NULL;
+    }
+
+    Pet *cursor = list->head;
+    while (cursor && cursor->person_code != person_code) {
+        cursor = cursor->next;
+    }
+
+    if (!cursor) {
+        printf("WARN: Pet not found\n");
+        return NULL;
+    }
+
+    printf("INFO: Found pet with code %d\n", person_code);
+    return cursor;
+}
+
+int remove_pets_from_person(PetList *list, int code) {
+    int count = 0;
+    while(1) {
+        Pet *found_pet = search_pet_by_person(list, code);
+        if(found_pet) {
+            remove_pet(list, found_pet->code);
+            count++;
+        } else {
+            break;
+        }
+    }
+    printf("Removed %d pets from person: %d", count, code);
+}
+
+
 // Deletes a person from the list
-int remove_person(PersonList *list, int code) {
+int remove_person(PersonList *list, PetList *petList, int code) {
     if (!list) {
         printf("WARN: Empty list\n");
         return 0;
@@ -161,14 +198,19 @@ int remove_person(PersonList *list, int code) {
     Person *toDelete = NULL;
     if (code == list->head->code) {
         toDelete = list->head;
-        toDelete->next->prev = NULL;
-        list->head = toDelete->next;
+        if(toDelete->next) {
+            toDelete->next->prev = NULL;
+            list->head = toDelete->next;
+        }
+
         printf("DELETION: Deleted person on top\n");
+        remove_pets_from_person(petList, code);
     } else if (code == list->tail->code && list->tail->code != list->head->code) {
         toDelete = list->tail;
         toDelete->prev->next = NULL;
         list->tail = toDelete->prev;
         printf("DELETION: Deleted person on bottom\n");
+        remove_pets_from_person(petList, code);
     } else {
         toDelete = search_person(list, code);
         if (!toDelete) {
@@ -185,18 +227,12 @@ int remove_person(PersonList *list, int code) {
 }
 
 // Updates a person's information
-Person *update_person(PersonList *list, int code, int new_code, char *name, char *phone, char *address, char *birthdate) {
+Person *update_person(PersonList *list, int code, char *name, char *phone, char *address, char *birthdate) {
     Person *target = search_person(list, code);
     if (!target) {
         printf("WARN: Person not found\n");
         return NULL;
     }
-
-    if (!check_code_person(*list, new_code)) {
-        printf("WARN: Code already exists\n");
-        return NULL;
-    }
-    target->code = new_code;
     strcpy(target->name, name);
     strcpy(target->phone, phone);
     strcpy(target->address, address);
@@ -237,4 +273,52 @@ void free_list_person(PersonList *list) {
     }
     list->head = list->tail = NULL;
     list->count = 0;
+}
+
+PersonNode *person_create_node(Person *person) {
+    PersonNode* new_person_node = (PersonNode*)malloc(sizeof(PersonNode));
+    new_person_node->person = person;
+    new_person_node->left = new_person_node->right = NULL;
+    return new_person_node;
+}
+
+PersonNode *person_insert(PersonNode *root, Person *person) {
+    if (!root) {
+        return person_create_node(person);
+    }
+
+    if (strcmp(person->name, root->person->name) < 0) {
+        root->left = person_insert(root->left, person);
+    } else if (strcmp(person->name, root->person->name) > 0) {
+        root->right = person_insert(root->right, person);
+    }
+    return root;
+}
+
+void person_inorderTraversal(PersonNode *root) {
+    if (!root) return;
+    person_inorderTraversal(root->left);
+    printf("%s ", root->person->name);
+    person_inorderTraversal(root->right);
+}
+
+void person_freeTree(PersonNode *root) {
+    if (!root) return;
+    person_freeTree(root->left);
+    person_freeTree(root->right);
+    free(root);
+}
+
+void person_print_order_by_name(PersonList *list) {
+    PersonNode *root = NULL;
+    Person *current = list->head;
+    while (current) {
+        root = person_insert(root, current);
+        current = current->next;
+    }
+
+    printf("In-order traversal: ");
+    person_inorderTraversal(root);
+    printf("\n");
+    person_freeTree(root);
 }

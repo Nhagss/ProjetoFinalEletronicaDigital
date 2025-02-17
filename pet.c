@@ -1,6 +1,6 @@
-#include "pet.h"
-#include "petType.h"
 #include "person.h"
+#include "petType.h"
+#include "pet.h"
 // Initializes an empty list
 void initialize_list_pet(PetList *list) {
     list->head = NULL;
@@ -106,11 +106,11 @@ Pet *insert_top_pet(PetList *list, PetTypeList *pt_list, PersonList *person_list
             printf("WARN: A pet with this code already exists!\n");
             return NULL;
         }
-        if (check_code_person(*person_list, code)) {
+        if (check_code_person(*person_list, person_code)) {
             printf("WARN: A person with this code does not exists!\n");
             return NULL;
         }
-        if (check_code_pt(*pt_list, code)) {
+        if (check_code_pt(*pt_list, type_code)) {
             printf("WARN: A pet type  with this code does not exists!\n");
             return NULL;
         }
@@ -125,7 +125,7 @@ Pet *insert_top_pet(PetList *list, PetTypeList *pt_list, PersonList *person_list
 }
 
 // Inserts a pet at the bottom of the list
-Pet *insert_bottom_pet(PetList *list, PetTypeList pt_list, PersonList person_list, int code, int person_code, char *name, int type_code) {
+Pet *insert_bottom_pet(PetList *list, PetTypeList *pt_list, PersonList *person_list, int code, int person_code, char *name, int type_code) {
     Pet *new = malloc(sizeof(Pet));
     if (!new) {
         printf("ERROR: Failed to allocate memory\n");
@@ -148,6 +148,14 @@ Pet *insert_bottom_pet(PetList *list, PetTypeList pt_list, PersonList person_lis
             printf("WARN: A pet with this code already exists!\n");
             return NULL;
         }
+        if (check_code_person(*person_list, person_code)) {
+            printf("WARN: A person with this code does not exists!\n");
+            return NULL;
+        }
+        if (check_code_pt(*pt_list, type_code)) {
+            printf("WARN: A pet type  with this code does not exists!\n");
+            return NULL;
+        }
         new->next = NULL;
         new->prev = list->tail;
         list->tail->next = new;
@@ -160,50 +168,71 @@ Pet *insert_bottom_pet(PetList *list, PetTypeList pt_list, PersonList person_lis
 
 // Deletes a pet from the list
 int remove_pet(PetList *list, int code) {
-    if (!list) {
+    if (!list || !list->head) {  // Verifica se a lista está vazia
         printf("WARN: Empty list\n");
         return 0;
     }
 
     Pet *toDelete = NULL;
+
+    // Caso o pet esteja no início da lista
     if (code == list->head->code) {
         toDelete = list->head;
-        toDelete->next->prev = NULL;
         list->head = toDelete->next;
+
+        if (list->head) {  // Evita acesso inválido caso haja só um nó
+            list->head->prev = NULL;
+        } else {
+            list->tail = NULL;  // Lista ficou vazia
+        }
+
         printf("DELETION: Deleted pet on top\n");
-    } else if (code == list->tail->code && list->tail->code != list->head->code) {
+
+        // Caso o pet esteja no final da lista
+    } else if (code == list->tail->code) {
         toDelete = list->tail;
-        toDelete->prev->next = NULL;
         list->tail = toDelete->prev;
+
+        if (list->tail) {  // Evita acesso inválido caso haja só um nó
+            list->tail->next = NULL;
+        } else {
+            list->head = NULL;  // Lista ficou vazia
+        }
+
         printf("DELETION: Deleted pet on bottom\n");
+
+        // Caso o pet esteja no meio da lista
     } else {
         toDelete = search_pet(list, code);
         if (!toDelete) {
             printf("WARN: Pet not found\n");
             return 0;
         }
-        toDelete->next->prev = toDelete->prev;
-        toDelete->prev->next = toDelete->next;
+
+        if (toDelete->next) {  // Verifica antes de acessar prev
+            toDelete->next->prev = toDelete->prev;
+        }
+        if (toDelete->prev) {  // Verifica antes de acessar next
+            toDelete->prev->next = toDelete->next;
+        }
+
         printf("DELETION: Deleted pet in the middle\n");
     }
+
     free(toDelete);
     list->count--;
     return 1;
 }
 
+
 // Updates a pet's information
-Pet *update_pet(PetList *list, int code, int new_code, int person_code, char *name, int type_code) {
+Pet *update_pet(PetList *list, int code, int person_code, char *name, int type_code) {
     Pet *target = search_pet(list, code);
     if (!target) {
         printf("WARN: Pet not found\n");
         return NULL;
     }
 
-    if (!check_code_pet(*list, new_code)) {
-        printf("WARN: Code already exists\n");
-        return NULL;
-    }
-    target->code = new_code;
     target->person_code = person_code;
     strcpy(target->name, name);
     target->type_code = type_code;
@@ -243,4 +272,52 @@ void free_list_pet(PetList *list) {
     }
     list->head = list->tail = NULL;
     list->count = 0;
+}
+
+PetNode *pet_create_node(Pet *pet) {
+    PetNode* new_pet_node = (PetNode*)malloc(sizeof(PetNode));
+    new_pet_node->pet = pet;
+    new_pet_node->left = new_pet_node->right = NULL;
+    return new_pet_node;
+}
+
+PetNode *pet_insert(PetNode *root, Pet *pet) {
+    if (!root) {
+        return pet_create_node(pet);
+    }
+
+    if (strcmp(pet->name, root->pet->name) < 0) {
+        root->left = pet_insert(root->left, pet);
+    } else if (strcmp(pet->name, root->pet->name) > 0) {
+        root->right = pet_insert(root->right, pet);
+    }
+    return root;
+}
+
+void pet_inorderTraversal(PetNode *root) {
+    if (!root) return;
+    pet_inorderTraversal(root->left);
+    printf("%s ", root->pet->name);
+    pet_inorderTraversal(root->right);
+}
+
+void pet_freeTree(PetNode *root) {
+    if (!root) return;
+    pet_freeTree(root->left);
+    pet_freeTree(root->right);
+    free(root);
+}
+
+void pet_print_order_by_name(PetList *list) {
+    PetNode *root = NULL;
+    Pet *current = list->head;
+    while (current) {
+        root = pet_insert(root, current);
+        current = current->next;
+    }
+
+    printf("In-order traversal: ");
+    pet_inorderTraversal(root);
+    printf("\n");
+    pet_freeTree(root);
 }

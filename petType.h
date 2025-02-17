@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Forward declaration para evitar ciclo
+struct Pet;
+struct PetList;
+
 // Pet Type structure
 typedef struct PetType {
     int code;
@@ -12,7 +16,7 @@ typedef struct PetType {
     struct PetType *prev, *next;
 } PetType;
 
-typedef struct {
+typedef struct PetTypeList{
     PetType *head;
     PetType *tail;
     int count;
@@ -30,8 +34,10 @@ PetType *search_pt(PetTypeList *list, int code);
 int check_code_pt(PetTypeList list, int code);
 PetType *insert_top_pt(PetTypeList *list, int code, char *name);
 PetType *insert_bottom_pt(PetTypeList *list, int code, char *name);
-int remove_pt(PetTypeList *list, int code);
-PetType *update_pt(PetTypeList *list, int code, int new_code, char *name);
+struct Pet *search_pet_by_pt(struct PetList *list, int pt_code);
+int remove_pets_with_pt(struct PetList *list, int code);
+int remove_pt(PetTypeList *list, struct PetList *petList, int code);
+PetType *update_pt(PetTypeList *list, int code, char *name);
 
 // Supplementary functions
 void print_list_pt(PetTypeList list);
@@ -44,10 +50,10 @@ typedef struct PTNode {
     struct PTNode *right;
 } PTNode;
 
-PTNode *create_node_pt(PetType *pet);
-PTNode *insert(PTNode *root, PetType *pet);
-void inorderTraversal(PTNode *root);
-void freeTree(PTNode *root);
-void print_pt_order_by_name(PetTypeList *list);
+PTNode *pt_create_node(PetType *pet);
+PTNode *pt_insert(PTNode *root, PetType *pet);
+void pt_inorderTraversal(PTNode *root);
+void pt_freeTree(PTNode *root);
+void pt_print_order_by_name(PetTypeList *list);
 
 #endif // PETTYPE_H

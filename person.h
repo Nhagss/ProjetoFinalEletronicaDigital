@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 // Person structure
 typedef struct Person {
     int code;               // Unique code for the person
@@ -16,11 +17,16 @@ typedef struct Person {
 } Person;
 
 // Person list structure
-typedef struct {
+typedef struct PersonList{
     Person *head;
     Person *tail;
     int count;
 } PersonList;
+
+
+// Forward declaration para evitar ciclo
+struct Pet;
+struct PetList;
 
 // Function prototypes
 void initialize_list_person(PersonList *list);
@@ -30,9 +36,23 @@ Person *search_person(PersonList *list, int code);
 int check_code_person(PersonList list, int code);
 Person *insert_top_person(PersonList *list, int code, char *name, char *phone, char *address, char *birthdate);
 Person *insert_bottom_person(PersonList *list, int code, char *name, char *phone, char *address, char *birthdate);
-int remove_person(PersonList *list, int code);
-Person *update_person(PersonList *list, int code, int new_code, char *name, char *phone, char *address, char *birthdate);
+struct Pet *search_pet_by_pt(struct PetList *list, int pt_code);
+int remove_pets_with_pt(struct PetList *list, int code);
+int remove_person(PersonList *list, struct PetList *petList, int code);
+Person *update_person(PersonList *list, int code, char *name, char *phone, char *address, char *birthdate);
 void print_list_person(PersonList list);
 void free_list_person(PersonList *list);
 
+// Binary tree for ordering by name
+typedef struct PersonNode {
+    Person *person;
+    struct PersonNode *left;
+    struct PersonNode *right;
+} PersonNode;
+
+PersonNode *person_create_node(Person *person);
+PersonNode *person_insert(PersonNode *root, Person *person);
+void person_inorderTraversal(PersonNode *root);
+void person_freeTree(PersonNode *root);
+void person_print_order_by_name(PersonList *list);
 #endif // PERSON_H

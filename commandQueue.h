@@ -32,7 +32,15 @@ typedef struct {
     CommandNode *tail;
 } CommandQueue;
 
-// Function prototypes
+
+
+struct PetType;
+struct PetTypeList;
+struct Person;
+struct PersonList;
+struct Pet;
+struct PetList;
+
 
 // Splits a SQL string into individual commands
 char **split_sql(char *sql);
@@ -67,4 +75,11 @@ void stackCommands(char **sql, CommandQueue *command_stack);
 // Frees the memory used by the command stack
 void free_command_stack(CommandQueue *command_stack);
 
+char *read_file_to_string(const char *filename);
+
+void initialize_command_queue(CommandQueue *command_queue);
+
+void queue_commands(char **sql, CommandQueue *command_queue);
+
+void execute_and_free_command_queue(struct PersonList *person_list,struct  PetTypeList *pt_list,struct  PetList *pet_list, CommandQueue *command_queue);
 #endif // COMMANDQUEUE_H

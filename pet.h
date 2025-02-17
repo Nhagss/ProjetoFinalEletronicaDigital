@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "person.h"
-#include "petType.h"
 // Pet structure
 typedef struct Pet {
     int code;               // Unique code for the pet
@@ -16,11 +14,16 @@ typedef struct Pet {
 } Pet;
 
 // Pet list structure
-typedef struct {
+typedef struct PetList{
     Pet *head;
     Pet *tail;
     int count;
 } PetList;
+
+struct PetType;
+struct PetTypeList;
+struct Person;
+struct PersonList;
 
 // Function prototypes
 void initialize_list_pet(PetList *list);
@@ -28,11 +31,24 @@ void save_list_pet(PetList *list, const char *filename);
 void load_list_pet(PetList *list, const char *filename);
 Pet *search_pet(PetList *list, int code);
 int check_code_pet(PetList list, int code);
-Pet *insert_top_pet(PetList *list, PetTypeList *pt_list, PersonList *person_list, int code, int person_code, char *name, int type_code);
-Pet *insert_bottom_pet(PetList *list, PetTypeList *pt_list, PersonList *person_list, int code, int person_code, char *name, int type_code);
+Pet *insert_top_pet(PetList *list, struct PetTypeList *pt_list, struct PersonList *person_list, int code, int person_code, char *name, int type_code);
+Pet *insert_bottom_pet(PetList *list, struct PetTypeList *pt_list, struct PersonList *person_list, int code, int person_code, char *name, int type_code);
 int remove_pet(PetList *list, int code);
-Pet *update_pet(PetList *list, int code, int new_code, int person_code, char *name, int type_code);
+Pet *update_pet(PetList *list, int code, int person_code, char *name, int type_code);
 void print_list_pet(PetList list);
 void free_list_pet(PetList *list);
+
+// Binary tree for ordering by name
+typedef struct PetNode {
+    Pet *pet;
+    struct PetNode *left;
+    struct PetNode *right;
+} PetNode;
+
+PetNode *pet_create_node(Pet *pet);
+PetNode *pet_insert(PetNode *root, Pet *pet);
+void pet_inorderTraversal(PetNode *root);
+void pet_freeTree(PetNode *root);
+void pet_print_order_by_name(PetList *list);
 
 #endif // PET_H

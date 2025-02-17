@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "person.h"
 #include "pet.h"
 #include "petType.h"
@@ -31,11 +32,33 @@ typedef struct {
     CommandNode *tail;
 } CommandQueue;
 
+// Function to remove extra spaces
+void trim(char *str) {
+    int i, start = 0, end = strlen(str) - 1;
+    while (str[start] == ' ') start++;
+    while (end > start && (str[end] == ' ' || str[end] == ';')) end--;
+    for (i = 0; start <= end; i++, start++) str[i] = str[start];
+    str[i] = '\0';
+}
+
+void trim_whitespace(char *str) {
+    if (!str) return;
+
+    char *end;
+    // Trim leading
+    while (isspace((unsigned char)*str)) str++;
+
+    // Trim trailing
+    end = str + strlen(str) - 1;
+    while (end >= str && isspace((unsigned char)*end)) end--;
+    *(end + 1) = '\0';
+}
+
 char **split_sql(char *sql) {
-    int capacity = 10; // Capacidade inicial
+    int capacity = 10;
     char **substrings = malloc(capacity * sizeof(char *));
     if (!substrings) {
-        printf("Erro ao alocar memória!\n");
+        fprintf(stderr, "Erro ao alocar memória!\n");
         return NULL;
     }
 
@@ -43,27 +66,40 @@ char **split_sql(char *sql) {
     int i = 0;
 
     while (sub) {
-        // Realocar se atingirmos a capacidade
-        if (i >= capacity - 1) {  // -1 para garantir espaço para NULL
-            capacity *= 2;
-            substrings = realloc(substrings, capacity * sizeof(char *));
-            if (!substrings) {
-                printf("Erro ao realocar memória!\n");
-                return NULL;
-            }
+        // Trim and check for empty strings
+        trim_whitespace(sub);
+        if (strlen(sub) == 0) {
+            sub = strtok(NULL, ";\n");
+            continue;
         }
 
-        substrings[i] = malloc(strlen(sub) + 1);
+        // Realloc check
+        if (i >= capacity - 1) {
+            capacity *= 2;
+            char **temp = realloc(substrings, capacity * sizeof(char *));
+            if (!temp) {
+                fprintf(stderr, "Erro ao realocar memória!\n");
+                for (int j = 0; j < i; j++) free(substrings[j]);
+                free(substrings);
+                return NULL;
+            }
+            substrings = temp;
+        }
+
+        // Allocate and copy
+        substrings[i] = strdup(sub);
         if (!substrings[i]) {
-            printf("Erro ao alocar memória!\n");
+            fprintf(stderr, "Erro ao alocar memória!\n");
+            for (int j = 0; j < i; j++) free(substrings[j]);
+            free(substrings);
             return NULL;
         }
-        strcpy(substrings[i], sub);
+
         i++;
         sub = strtok(NULL, ";");
     }
 
-    substrings[i] = NULL; // Adiciona NULL ao final para indicar fim da lista
+    substrings[i] = NULL;
     return substrings;
 }
 
@@ -111,15 +147,6 @@ void initialize_command(Command *cmd) {
     cmd->table[0] = '\0';
     cmd->extra[0] = '\0';
     cmd->error[0] = '\0';
-}
-
-// Function to remove extra spaces
-void trim(char *str) {
-    int i, start = 0, end = strlen(str) - 1;
-    while (str[start] == ' ') start++;
-    while (end > start && (str[end] == ' ' || str[end] == ';')) end--;
-    for (i = 0; start <= end; i++, start++) str[i] = str[start];
-    str[i] = '\0';
 }
 
 // Function to extract values between parentheses
@@ -282,6 +309,12 @@ int parse_command(char *sql, Command *cmd) {
         char *extra_ptr = strstr(sql, " order by ");
         if (extra_ptr) {
             strcpy(cmd->extra, extra_ptr); // Store the ORDER BY clause
+        } else {
+            char *extra_ptr = strstr(sql, " where code = ");
+            if(extra_ptr) {
+                strcpy(cmd->extra, extra_ptr); // Store the ORDER BY clause
+
+            }
         }
     }
 
@@ -399,28 +432,437 @@ Command* dequeue_command(CommandQueue *command_queue) {
     return cmd;
 }
 
-int execute_person_command(Command *cmd, PersonList *person_list) {
-
+// Helper: remove aspas simples do início e fim da string (se existirem)
+void remove_quotes(char *str) {
+    int len = strlen(str);
+    if (len >= 2 && str[0] == '\'' && str[len - 1] == '\'') {
+        // Desloca para a esquerda para remover a primeira aspa
+        memmove(str, str + 1, len - 2);
+        str[len - 2] = '\0';
+    }
 }
 
-int execute_pet_command(Command *cmd, PetList *pet_list) {
+// Execute a command on the Person table
+int execute_person_command(Command *cmd, PersonList *person_list, PetList *pet_list) {
+    if (strcmp(cmd->method, "insert") == 0) {
+        int code = -1;
+        char name[50] = "", phone[15] = "", address[100] = "", birthdate[11] = "";
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "code") == 0) {
+                remove_quotes(cmd->values[i]);
+                code = atoi(cmd->values[i]);
+            } else if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            } else if (strcmp(cmd->keys[i], "phone") == 0) {
+                strcpy(phone, cmd->values[i]);
+                remove_quotes(phone);
+            } else if (strcmp(cmd->keys[i], "address") == 0) {
+                strcpy(address, cmd->values[i]);
+                remove_quotes(address);
+            } else if (strcmp(cmd->keys[i], "birthdate") == 0) {
+                strcpy(birthdate, cmd->values[i]);
+                remove_quotes(birthdate);
+            }
+        }
+        // Required fields: code, name, birthdate
+        if (code == -1 || strlen(name) == 0 || strlen(birthdate) == 0) {
+            strcpy(cmd->error, "Missing required fields for person insertion.");
+            return 0;
+        }
+        Person *p = insert_bottom_person(person_list, code, name, phone, address, birthdate);
+        if (p == NULL) {
+            strcpy(cmd->error, "Failed to insert person (duplicate code or memory error).");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "update") == 0) {
+        int current_code = -1;
+        char name[50] = "", phone[15] = "", address[100] = "", birthdate[11] = "";
+        // Expect extra: \"code = 'X'\" to indicate which person to update
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                current_code = atoi(numStr);
+            }
+        }
+        if (current_code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for person update.");
+            return 0;
+        }
 
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            } else if (strcmp(cmd->keys[i], "phone") == 0) {
+                strcpy(phone, cmd->values[i]);
+                remove_quotes(phone);
+            } else if (strcmp(cmd->keys[i], "address") == 0) {
+                strcpy(address, cmd->values[i]);
+                remove_quotes(address);
+            } else if (strcmp(cmd->keys[i], "birthdate") == 0) {
+                strcpy(birthdate, cmd->values[i]);
+                remove_quotes(birthdate);
+            }
+        }
+        Person *current_p = search_person(person_list, current_code);
+        if(!strcmp(name, ""))
+            strcpy(name, current_p->name);
+        if(!strcmp(phone, ""))
+            strcpy(phone, current_p->phone);
+        if(!strcmp(address, ""))
+            strcpy(address, current_p->address);
+        if(!strcmp(birthdate, ""))
+            strcpy(birthdate, current_p->birthdate);
+        Person *p = update_person(person_list, current_code, name, phone, address, birthdate);
+        if (p == NULL) {
+            strcpy(cmd->error, "Failed to update person.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "delete") == 0) {
+        int code = -1;
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                code = atoi(numStr);
+            }
+        }
+        if (code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for person deletion.");
+            return 0;
+        }
+        int result = remove_person(person_list, pet_list, code);
+        if (!result) {
+            strcpy(cmd->error, "Failed to delete pet.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "search") == 0) {
+
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            if (strstr(cmd->extra, "order by name")) {
+                person_print_order_by_name(person_list);
+            } else {
+                char *equal = strchr(cmd->extra, '=');
+                int code = -1;
+                if (equal) {
+                    char numStr[20] = {0};
+                    strcpy(numStr, equal + 1);
+                    remove_quotes(numStr);
+                    code = atoi(numStr);
+                }
+                if (code != -1) {
+                    Person *person = search_person(person_list, code);
+                    if (person)
+                        printf("Found person: Code: %d, Name: %s\n", person->code, person->name);
+                    else
+                        printf("Person with code %d not found.\n", code);
+                }
+            }
+        } else {
+            print_list_person(*person_list);
+
+        }
+        return 1;
+    }
+    strcpy(cmd->error, "Unknown method for person command.");
+    return 0;
 }
 
-int execute_pt_command(Command *cmd, PetTypeList *pt_list) {
+// Execute command on the Pet table
+int execute_pet_command(Command *cmd, PetList *pet_list, PetTypeList *pt_list, PersonList *person_list) {
+    if (strcmp(cmd->method, "insert") == 0) {
+        int code = -1, person_code = -1, type_code = -1;
+        char name[50] = "";
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "code") == 0) {
+                remove_quotes(cmd->values[i]);
+                code = atoi(cmd->values[i]);
+            } else if (strcmp(cmd->keys[i], "person_code") == 0) {
+                remove_quotes(cmd->values[i]);
+                person_code = atoi(cmd->values[i]);
+            } else if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            } else if (strcmp(cmd->keys[i], "type_code") == 0) {
+                remove_quotes(cmd->values[i]);
+                type_code = atoi(cmd->values[i]);
+            }
+        }
+        if (code == -1 || person_code == -1 || type_code == -1 || strlen(name) == 0) {
+            strcpy(cmd->error, "Missing required fields for pet insertion.");
+            return 0;
+        }
+        // Validate that person and pet type exist
+        Person *p = search_person(person_list, person_code);
+        if (p == NULL) {
+            strcpy(cmd->error, "Invalid person_code for pet insertion.");
+            return 0;
+        }
+        PetType *pt = search_pt(pt_list, type_code);
+        if (pt == NULL) {
+            strcpy(cmd->error, "Invalid type_code for pet insertion.");
+            return 0;
+        }
+        Pet *pet = insert_bottom_pet(pet_list, pt_list, person_list, code, person_code, name, type_code);
+        if (pet == NULL) {
+            strcpy(cmd->error, "Failed to insert pet (duplicate code or memory error).");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "update") == 0) {
+        int current_code = -1, person_code = -1, type_code = -1;
+        char name[50] = "";
 
+        // Obter o código atual do pet
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                current_code = atoi(numStr);
+            }
+        }
+        if (current_code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for pet update.");
+            return 0;
+        }
+
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "person_code") == 0) {
+                remove_quotes(cmd->values[i]);
+                person_code = atoi(cmd->values[i]);
+            } else if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            } else if (strcmp(cmd->keys[i], "type_code") == 0) {
+                remove_quotes(cmd->values[i]);
+                type_code = atoi(cmd->values[i]);
+            }
+        }
+
+        // Buscar o pet atual
+        Pet *current_pet = search_pet(pet_list, current_code);
+        if (current_pet == NULL) {
+            strcpy(cmd->error, "Pet not found.");
+            return 0;
+        }
+
+        // Preencher campos não especificados com os valores atuais
+        if (strlen(name) == 0) strcpy(name, current_pet->name);
+        if (person_code == -1) person_code = current_pet->person_code;
+        if (type_code == -1) type_code = current_pet->type_code;
+
+        // Validar códigos de pessoa e tipo de pet
+        if (search_person(person_list, person_code) == NULL) {
+            strcpy(cmd->error, "Invalid person_code for pet update.");
+            return 0;
+        }
+        if (search_pt(pt_list, type_code) == NULL) {
+            strcpy(cmd->error, "Invalid type_code for pet update.");
+            return 0;
+        }
+
+        // Atualizar pet
+        Pet *pet = update_pet(pet_list, current_code, person_code, name, type_code);
+        if (pet == NULL) {
+            strcpy(cmd->error, "Failed to update pet.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "delete") == 0) {
+        int code = -1;
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                code = atoi(numStr);
+            }
+        }
+        if (code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for pet deletion.");
+            return 0;
+        }
+        int result = remove_pet(pet_list, code);
+        if (!result) {
+            strcpy(cmd->error, "Failed to delete pet.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "search") == 0) {
+
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            if (strstr(cmd->extra, "order by name")) {
+                pet_print_order_by_name(pet_list);
+            } else {
+                char *equal = strchr(cmd->extra, '=');
+                int code = -1;
+                if (equal) {
+                    char numStr[20] = {0};
+                    strcpy(numStr, equal + 1);
+                    remove_quotes(numStr);
+                    code = atoi(numStr);
+                }
+                if (code != -1) {
+                    Pet *pet = search_pet(pet_list, code);
+                    if (pet)
+                        printf("Found pet: Code: %d, Name: %s\n", pet->code, pet->name);
+                    else
+                        printf("Pet with code %d not found.\n", code);
+                }
+            }
+        } else {
+            print_list_pet(*pet_list);
+
+        }
+        return 1;
+    }
+    strcpy(cmd->error, "Unknown method for pet command.");
+    return 0;
 }
 
+// Execute command on the Pet Type table
+int execute_pt_command(Command *cmd, PetTypeList *pt_list, PetList *pet_list) {
+    if (strcmp(cmd->method, "insert") == 0) {
+        int code = -1;
+        char name[50] = "";
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "code") == 0) {
+                remove_quotes(cmd->values[i]);
+                code = atoi(cmd->values[i]);
+            } else if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            }
+        }
+        if (code == -1 || strlen(name) == 0) {
+            strcpy(cmd->error, "Missing required fields for pet type insertion.");
+            return 0;
+        }
+        PetType *pt = insert_bottom_pt(pt_list, code, name);
+        if (pt == NULL) {
+            strcpy(cmd->error, "Failed to insert pet type (duplicate code or memory error).");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "update") == 0) {
+        int current_code = -1;
+        char name[50] = "";
+
+        // Obter o código atual do tipo de pet
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                current_code = atoi(numStr);
+            }
+        }
+        if (current_code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for pet type update.");
+            return 0;
+        }
+
+        for (int i = 0; i < cmd->key_count; i++) {
+            if (strcmp(cmd->keys[i], "name") == 0) {
+                strcpy(name, cmd->values[i]);
+                remove_quotes(name);
+            }
+        }
+
+        // Buscar o tipo de pet atual
+        PetType *current_pt = search_pt(pt_list, current_code);
+        if (current_pt == NULL) {
+            strcpy(cmd->error, "Pet type not found.");
+            return 0;
+        }
+
+        // Preencher campos não especificados com os valores atuais
+        if (strlen(name) == 0) strcpy(name, current_pt->name);
+
+        // Atualizar tipo de pet
+        PetType *pt = update_pt(pt_list, current_code, name);
+        if (pt == NULL) {
+            strcpy(cmd->error, "Failed to update pet type.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "delete") == 0) {
+        int code = -1;
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            char *equal = strchr(cmd->extra, '=');
+            if (equal) {
+                char numStr[20] = {0};
+                strcpy(numStr, equal + 1);
+                remove_quotes(numStr);
+                code = atoi(numStr);
+            }
+        }
+        if (code == -1) {
+            strcpy(cmd->error, "Missing or invalid code in WHERE clause for pet type deletion.");
+            return 0;
+        }
+        int result = remove_pt(pt_list, pet_list, code);
+        if (!result) {
+            strcpy(cmd->error, "Failed to delete pet type.");
+            return 0;
+        }
+        return 1;
+    } else if (strcmp(cmd->method, "search") == 0) {
+
+        if (cmd->extra && strlen(cmd->extra) > 0) {
+            if (strstr(cmd->extra, "order by name")) {
+                pt_print_order_by_name(pt_list);
+            } else {
+                char *equal = strchr(cmd->extra, '=');
+                int code = -1;
+                if (equal) {
+                    char numStr[20] = {0};
+                    strcpy(numStr, equal + 1);
+                    remove_quotes(numStr);
+                    code = atoi(numStr);
+                }
+                if (code != -1) {
+                    PetType *pt = search_pt(pt_list, code);
+                    if (pt)
+                        printf("Found pet type: Code: %d, Name: %s\n", pt->code, pt->name);
+                    else
+                        printf("Pet type with code %d not found.\n", code);
+                }
+            }
+        } else {
+            print_list_pt(*pt_list);
+
+        }
+        return 1;
+    }
+    strcpy(cmd->error, "Unknown method for pet type command.");
+    return 0;
+}
+
+// General command execution: routes command to appropriate table executor
 int execute_commmand(Command *cmd, PetTypeList *pt_list, PetList *pet_list, PersonList *person_list) {
-    if(!strcmp(cmd->table, "people")){
-        execute_person_command(cmd, person_list);
-    } else if(!strcmp(cmd->table, "pets")){
-        execute_pet_command(cmd, pet_list);
-
-    } else if(!strcmp(cmd->table, "pet_types")){
-        execute_pt_command(cmd, pt_list);
+    if (!strcmp(cmd->table, "people")) {
+        return execute_person_command(cmd, person_list, pet_list);
+    } else if (!strcmp(cmd->table, "pets")) {
+        return execute_pet_command(cmd, pet_list, pt_list, person_list);
+    } else if (!strcmp(cmd->table, "pet_types")) {
+        return execute_pt_command(cmd, pt_list, pet_list);
     } else {
-        printf("Unexpected table and error on parse_command");
+        printf("Unexpected table and error on parse_command\n");
+        return 0;
     }
 }
 
@@ -441,6 +883,7 @@ void free_command(Command *cmd) {
     for (int i = 0; cmd->values[i] != NULL; i++) { // Stop at sentinel
         free(cmd->values[i]);
     }
+
     free(cmd->values);
 
     free(cmd->extra);
@@ -449,7 +892,21 @@ void free_command(Command *cmd) {
 }
 
 // Function to free the command queue
-void execute_and_free_command_queue(CommandQueue *command_queue) {
+void execute_and_free_command_queue(PersonList *person_list, PetTypeList *pt_list, PetList *pet_list, CommandQueue *command_queue) {
+    Command *cmd;
+    while ((cmd = dequeue_command(command_queue)) != NULL) {
+        printf("Processing command:\n");
+        execute_commmand(cmd, pt_list, pet_list, person_list);
+        // Free the command after processing
+        if(strcmp(cmd->error, "")) {
+            printf("ERROR: %s\n",cmd->error);
+        }
+        printf("\n");
+        free_command(cmd);
+    }
+}
+
+void print_and_free_command_queue(CommandQueue *command_queue) {
     Command *cmd;
     while ((cmd = dequeue_command(command_queue)) != NULL) {
         printf("Processing command:\n");
@@ -458,111 +915,73 @@ void execute_and_free_command_queue(CommandQueue *command_queue) {
         free_command(cmd);
     }
 }
+void normalize_line_endings(char *str) {
+    if (!str) return;
 
+    char *src = str;
+    char *dst = str;
 
-int testAF() {
-    CommandQueue *command_queue = malloc(sizeof(CommandQueue));
-    if (!command_queue) {
-        printf("Error allocating memory for command queue\n");
-        return 1;
-    }
-    initialize_command_queue(command_queue);
-
-    // Test SQL commands
-    char *test_sqls[] = {
-            "insert into people (name, age) values ('John', '30');", // Valid INSERT
-            "update people set age = '31' where name = 'John';",     // Valid UPDATE
-            "delete from people where code = 10;",                   // Valid DELETE
-            "select * from people order by age;",                    // Valid SELECT
-            "insert into pets (name, type) values ('Buddy', 'Dog');", // Valid INSERT (different table)
-            "update pets set type = 'Cat' where name = 'Buddy';",     // Valid UPDATE (different table)
-            "delete from pets where code = 5;",                      // Valid DELETE (different table)
-            "select * from pets order by name;",                     // Valid SELECT (different table)
-            "insert into invalid_table (name) values ('Test');",     // Invalid table
-            "update invalid_table set name = 'Test';",               // Invalid table
-            "delete from invalid_table where code = 1;",             // Invalid table
-            "select * from invalid_table;",                          // Invalid table
-            "invalid SQL command;",                                  // Invalid SQL
-            NULL // Sentinel to mark the end of the array
-    };
-
-    // Queue and process all commands
-    queue_commands(test_sqls, command_queue);
-
-    // Execute and free the command queue
-    execute_and_free_command_queue(command_queue);
-
-    // Free the command queue itself
-    free(command_queue);
-
-    return 0;
-}
-
-// Main function for testing
-// Example fix for double free in main function
-int main() {
-    CommandQueue *command_queue = malloc(sizeof(CommandQueue));
-    initialize_command_queue(command_queue);
-
-    // Use a modifiable char array (not a string literal)
-    char test_sql[] = "insert into people (name, age) values ('John', '30'); update people set age = '31' where name = 'John'; delete from people where code = 10; select * from people order by age; insert into pets (name, type) values ('Buddy', 'Dog'); update pets set type = 'Cat' where name = 'Buddy'; delete from pets where code = 5; select * from pets order by name; insert into invalid_table (name) values ('Test'); update invalid_table set name = 'Test'; delete from invalid_table where code = 1; select * from invalid_table; invalid SQL command; NULL";
-
-    char **test_sqls = split_sql(test_sql);
-    queue_commands(test_sqls, command_queue);
-
-    // Free only once
-    if (test_sqls) {
-        for (int i = 0; test_sqls[i] != NULL; i++) {
-            free(test_sqls[i]);
+    while (*src) {
+        if (*src == '\r') {
+            // Skip CR characters
+            src++;
+            src++;
+        } else {
+            *dst++ = *src++;
         }
-        free(test_sqls);
+    }
+    *dst = '\0';
+}
+char *read_file_to_string(const char *filename) {
+    FILE *file = fopen(filename, "rb");  // Open in binary mode for accurate size calculation
+    if (!file) {
+        perror("Error opening file");
+        return NULL;
     }
 
-    free(command_queue);
-    return 0;
-}
-/*
-int main() {
-    CommandQueue *command_queue = malloc(sizeof(CommandQueue));
-    if (!command_queue) {
-        printf("Error allocating memory for command queue\n");
-        return 1;
+    // Determine file size
+    if (fseek(file, 0, SEEK_END) != 0) {
+        perror("Error seeking file");
+        fclose(file);
+        return NULL;
     }
-    initialize_command_queue(command_queue);
 
-    // Test SQL commands
-    char *test_sqls[] = {
-            "insert into people (name, age) values ('John', '30');", // Valid INSERT
-            "update people set age = '31' where name = 'John';",     // Valid UPDATE
-            "delete from people where code = 10;",                   // Valid DELETE
-            "select * from people order by age;",                    // Valid SELECT
-            "insert into pets (name, type) values ('Buddy', 'Dog');", // Valid INSERT (different table)
-            "update pets set type = 'Cat' where name = 'Buddy';",     // Valid UPDATE (different table)
-            "delete from pets where code = 5;",                      // Valid DELETE (different table)
-            "select * from pets order by name;",                     // Valid SELECT (different table)
-            "insert into invalid_table (name) values ('Test');",     // Invalid table
-            "update invalid_table set name = 'Test';",               // Invalid table
-            "delete from invalid_table where code = 1;",             // Invalid table
-            "select * from invalid_table;",                          // Invalid table
-            "invalid SQL command;",                                  // Invalid SQL
-            NULL // Sentinel to mark the end of the array
-    };
+    long file_size = ftell(file);
+    if (file_size == -1) {
+        perror("Error getting file size");
+        fclose(file);
+        return NULL;
+    }
 
-    printf("Starting to queue commands...\n");
+    rewind(file);
 
-    // Queue and process all commands
-    queue_commands(test_sqls, command_queue);
+    // Allocate memory for file content + null terminator
+    char *buffer = (char *)malloc(file_size + 1);
+    if (!buffer) {
+        perror("Error allocating memory");
+        fclose(file);
+        return NULL;
+    }
 
-    printf("Finished queueing commands. Executing and freeing the queue...\n");
+    // Read file content
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    if (bytes_read != (size_t)file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return NULL;
+    }
 
-    // Execute and free the command queue
-    execute_and_free_command_queue(command_queue);
+    // Null-terminate the string
+    buffer[bytes_read] = '\0';
 
-    printf("Command queue freed. Exiting program.\n");
+    if (fclose(file) != 0) {
+        perror("Error closing file");
+        free(buffer);
+        return NULL;
+    }
 
-    // Free the command queue itself
-    free(command_queue);
+    normalize_line_endings(buffer);
 
-    return 0;
+    return buffer;
 }
- */

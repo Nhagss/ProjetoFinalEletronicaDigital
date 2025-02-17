@@ -1,21 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "commandQueue.h"
+#include "person.h"
+#include "pet.h"
+#include "petType.h"
+
 //*********** PETTYPE.C ***************
 
-// Pet Type structur
-typedef struct PetType {
-    int code;
-    char name[50];
-    struct PetType *prev, *next;
-} PetType;
-
-typedef struct {
-    PetType *head;
-    PetType *tail;
-    int count;
-} PetTypeList;
 
 // Initializes an empty list
 void initialize_list_pt(PetTypeList *list) { list->head = NULL; list->tail = NULL; list->count = 0; }
@@ -164,8 +152,43 @@ PetType *insert_bottom_pt(PetTypeList *list, int code, char *name) {
     return new;
 }
 
+Pet *search_pet_by_pt(PetList *list, int pt_code) {
+    if (!list || !list->head) {
+        printf("WARN: Pet list is empty\n");
+        return NULL;
+    }
+
+    Pet *cursor = list->head;
+    while (cursor && cursor->type_code != pt_code) {
+        cursor = cursor->next;
+    }
+
+    if (!cursor) {
+        printf("WARN: Pet not found\n");
+        return NULL;
+    }
+
+    printf("INFO: Found pet with code %d\n", pt_code);
+    return cursor;
+}
+
+int remove_pets_with_pt(PetList *list, int code) {
+    int count = 0;
+    while(1) {
+        Pet *found_pet = search_pet_by_pt(list, code);
+        if(found_pet) {
+            remove_pet(list, found_pet->code);
+            count++;
+        } else {
+            break;
+        }
+    }
+    printf("Removed %d pets with petType: %d", count, code);
+}
+
+
 // Delete Function (returns 0 if it fails and 1 if it succesess)
-int remove_pt(PetTypeList *list, int code) {
+int remove_pt(PetTypeList *list, PetList *petList, int code) {
     if (!list) {
         printf("WARN: Empty list\n");
         return 0;
@@ -177,14 +200,16 @@ int remove_pt(PetTypeList *list, int code) {
         toDelete->next->prev = NULL;
 
         list->head = toDelete->next;
-
+        remove_pets_with_pt(petList, code);
         printf("DELETION: Deleted pet type on top");
+        remove_pets_with_pt(petList, code);
     }else if (code == list->tail->code && list->tail->code != list->head->code) {
         toDelete = list->tail;
         toDelete->prev->next = NULL;
 
         list->tail = toDelete->prev;
         printf("DELETION: Deleted pet type on bottom");
+        remove_pets_with_pt(petList, code);
     } else {
         toDelete = search_pt(list, code);
         if(!toDelete) {
@@ -195,24 +220,20 @@ int remove_pt(PetTypeList *list, int code) {
         toDelete->prev->next = toDelete->next;
 
         printf("DELETION: Deleted pet type on middle");
+        remove_pets_with_pt(petList, code);
     }
     free(toDelete);
     list->count--;
     return 1;
 }
 
-PetType *update_pt(PetTypeList *list, int code, int new_code, char *name) {
+PetType *update_pt(PetTypeList *list, int code, char *name) {
     PetType *target = search_pt(list, code);
     if(!target) {
         printf("WARN: Pet Type not found\n");
         return NULL;
     }
 
-    if(!check_code_pt(*list, new_code)) {
-        printf("WARN: Code already exists\n");
-        return NULL;
-    }
-    target->code = new_code;
     strcpy(target->name, name);
     return target;
 }
@@ -256,91 +277,51 @@ void free_list_pt(PetTypeList *list) {
 }
 
 //Using binary tree to order pet type by name
-// PERGUNTAR AO AJALMAR SE PODE HAVER USUARIOS COM NOME IGUAL
 
-typedef struct PTNode {
-    PetType *pet;
-    struct PTNode *left;
-    struct PTNode *right;
-} PTNode;
-
-PTNode *create_node_pt(PetType *pet) {
+PTNode *pt_create_node(PetType *pet) {
     PTNode* new_pt_node = (PTNode*)malloc(sizeof(PTNode));
     new_pt_node->pet = pet;
     new_pt_node->left = new_pt_node->right = NULL;
     return new_pt_node;
 }
 
-PTNode *insert(PTNode *root, PetType *pet) {
+PTNode *pt_insert(PTNode *root, PetType *pet) {
     if (!root) {
-        return create_node_pt(pet);
+        return pt_create_node(pet);
     }
 
     if (strcmp(pet->name, root->pet->name) < 0) {
-        root->left = insert(root->left, pet);
+        root->left = pt_insert(root->left, pet);
     } else if (strcmp(pet->name, root->pet->name) > 0) {
-        root->right = insert(root->right, pet);
+        root->right = pt_insert(root->right, pet);
     }
     return root;
 }
 
-void inorderTraversal(PTNode *root) {
+void pt_inorderTraversal(PTNode *root) {
     if (!root) return;
-    inorderTraversal(root->left);
+    pt_inorderTraversal(root->left);
     printf("%s ", root->pet->name);
-    inorderTraversal(root->right);
+    pt_inorderTraversal(root->right);
 }
 
-void freeTree(PTNode *root) {
+void pt_freeTree(PTNode *root) {
     if (!root) return;
-    freeTree(root->left);
-    freeTree(root->right);
+    pt_freeTree(root->left);
+    pt_freeTree(root->right);
     free(root);
 }
 
-void print_pt_order_by_name(PetTypeList *list) {
+void pt_print_order_by_name(PetTypeList *list) {
     PTNode *root = NULL;
     PetType *current = list->head;
     while (current) {
-        root = insert(root, current);
+        root = pt_insert(root, current);
         current = current->next;
     }
 
     printf("In-order traversal: ");
-    inorderTraversal(root);
+    pt_inorderTraversal(root);
     printf("\n");
-    freeTree(root);
-}
-
-int main2() {
-    PetTypeList petTypeList;
-    initialize_list_pt(&petTypeList);
-    load_list_pt(&petTypeList, "petTypes.dat");
-
-    insert_top_pt(&petTypeList, 1, "g");
-    insert_top_pt(&petTypeList, 2, "h");
-    insert_top_pt(&petTypeList, 3, "c");
-    insert_top_pt(&petTypeList, 4, "v");
-    insert_top_pt(&petTypeList, 5, "b");
-    insert_top_pt(&petTypeList, 6, "n");
-    insert_top_pt(&petTypeList, 7, "m");
-    print_list_pt(petTypeList);
-    print_pt_order_by_name(&petTypeList);
-/*
-    PetType *teste = petTypeList.head;
-    PTNode *root = NULL;
-    while (teste) {
-        insert(root, *teste);
-    }
-    printf("In order:");
-    inorderTraversal(root);
-    printf("\n");
-    freeTree(root);
-*/
-    //update_pt(&petTypeList, 11, 14, "Rodolfake");
-    //remove_pt(&petTypeList, 11);
-    //print_list_pt(petTypeList);
-    save_list_pt(&petTypeList, "petTypes.dat");
-    free_list_pt(&petTypeList);
-    return 0;
+    pt_freeTree(root);
 }
